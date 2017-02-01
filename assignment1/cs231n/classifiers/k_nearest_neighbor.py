@@ -121,8 +121,12 @@ class KNearestNeighbor(object):
     # HINT: Try to formulate the l2 distance using matrix multiplication    #
     #       and two broadcast sums.                                         #
     #########################################################################
-    import scipy.spatial
-    dists = scipy.spatial.distance.cdist(X, self.X_train)
+    #dists = np.linalg.norm(X[:, None, :] - self.X_train, axis=2)
+
+    # source: https://www.reddit.com/r/cs231n/comments/5ee2zk/assignment_1_one_loop_implementation_longest/
+    # ((a, b) - (c, d))^2 = (a - c) ^ 2 + (b - d) ^ 2 = a ^ 2 - 2 * a * c + c ^ 2 + b ^ 2 - 2 * b * d + d ^ 2 =
+    #  = a ^ 2 + b ^ 2 + c ^ 2 + d ^ 2 - 2 * a * c - 2 * b * d
+    dists = np.sqrt((X**2).sum(axis=1)[:, np.newaxis] + (self.X_train**2).sum(axis=1) - 2 * X.dot(self.X_train.T))
     #########################################################################
     #                         END OF YOUR CODE                              #
     #########################################################################
