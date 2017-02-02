@@ -72,7 +72,14 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  num_classes = W.shape[1]
+  num_train = X.shape[0]
+  scores = np.matmul(X, W)
+  correct_class_score = scores[np.arange(scores.shape[0]), y]
+  margin = (scores.T - correct_class_score).T + 1
+  margin[np.arange(margin.shape[0]), y] = 0
+  margin[margin < 0] = 0
+  loss = np.sum(margin) / num_train + 0.5 * reg * np.sum(W * W)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -87,7 +94,26 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  for j in xrange(num_classes):
+    dW[:, j] += np.sum(X[margin[:, j] > 0], axis = 0)
+
+    # for i in xrange(num_train):
+    #   dW[:, y[i]] -= X[i] * (margin[i, j] > 0)
+
+    t = (X.T * (margin[:, j] > 0)).T
+
+    # 1st approximation
+    # for i in xrange(num_train):
+    #   dW[:, y[i]] -= t[i]
+
+    # 2nd approximation
+    for k in xrange(num_classes):
+      s = (y == k)
+      dW[:, k] -= np.sum(t[s, :], axis = 0)
+
+  dW /= num_train
+  dW += reg * W
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
