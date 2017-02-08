@@ -179,9 +179,9 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     sample_mean = np.mean(x, axis = 0)
     sample_var = np.mean((x - sample_mean) ** 2)
 
-    out = (x - sample_mean) / np.sqrt(sample_var) * gamma + beta
+    out = (x - sample_mean) / np.sqrt(sample_var + eps) * gamma + beta
 
-    cache = (sample_mean, sample_var)
+    cache = (sample_mean, sample_var, gamma, beta)
 
     running_mean = momentum * running_mean + (1 - momentum) * sample_mean
     running_var = momentum * running_var + (1 - momentum) * sample_var
@@ -195,7 +195,7 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # and shift the normalized data using gamma and beta. Store the result in   #
     # the out variable.                                                         #
     #############################################################################
-    out = (x - running_mean) / np.sqrt(running_var) * gamma + beta
+    out = (x - running_mean) / np.sqrt(running_var + eps) * gamma + beta
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -265,7 +265,7 @@ def batchnorm_backward_alt(dout, cache):
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
-  
+
   return dx, dgamma, dbeta
 
 
