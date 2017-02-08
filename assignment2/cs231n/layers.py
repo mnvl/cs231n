@@ -176,12 +176,35 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     # the momentum variable to update the running mean and running variance,    #
     # storing your result in the running_mean and running_var variables.        #
     #############################################################################
-    sample_mean = np.mean(x, axis = 0)
-    sample_var = np.mean((x - sample_mean) ** 2)
+    # sample_mean = np.mean(x, axis = 0)
+    # sample_var = np.mean((x - sample_mean) ** 2)
 
-    out = (x - sample_mean) / np.sqrt(sample_var + eps) * gamma + beta
+    # out = (x - sample_mean) / np.sqrt(sample_var + eps) * gamma + beta
 
-    cache = (sample_mean, sample_var, gamma, beta)
+    # cache = (sample_mean, sample_var, gamma, beta)
+
+    sample_mean = np.sum(x, axis = 0) / N
+
+    x_centered = x - sample_mean
+
+    x_centered_squared = x_centered ** 2
+
+    sample_var = np.sum(x_centered_squared, axis = 0) / N
+
+    sample_var_sqrt = np.sqrt(sample_var + eps)
+
+    sample_var_sqrt_inv = 1 / sample_var_sqrt
+
+    x_norm = x_centered * sample_var_sqrt_inv
+
+    x_norm_gamma = x_norm * gamma
+
+    x_norm_gamma_beta = x_norm_gamma + beta
+
+    out = x_norm_gamma_beta
+    cache = (x_centered, x_centered_squared, sample_var, sample_var_sqrt,
+             sample_var_sqrt_inv, x_norm, x_norm_gamma, x_norm_gamma_beta,
+             gamma, beta)
 
     running_mean = momentum * running_mean + (1 - momentum) * sample_mean
     running_var = momentum * running_var + (1 - momentum) * sample_var
@@ -231,7 +254,13 @@ def batchnorm_backward(dout, cache):
   # TODO: Implement the backward pass for batch normalization. Store the      #
   # results in the dx, dgamma, and dbeta variables.                           #
   #############################################################################
-  pass
+
+  # https://kratzert.github.io/2016/02/12/understanding-the-gradient-flow-through-the-batch-normalization-layer.html
+
+  (x_centered, x_centered_squared, sample_var, sample_var_sqrt,
+   sample_var_sqrt_inv, x_norm, x_norm_gamma, x_norm_gamma_beta,
+   gamma, beta) = cache
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
