@@ -185,26 +185,26 @@ def batchnorm_forward(x, gamma, beta, bn_param):
 
     sample_mean = np.sum(x, axis = 0) / N
 
-    x_centered = x - sample_mean
+    x_center = x - sample_mean
 
-    x_centered_squared = x_centered ** 2
+    x_center_squared = x_center ** 2
 
-    sample_var = np.sum(x_centered_squared, axis = 0) / N
+    sample_var = np.sum(x_center_squared, axis = 0) / N
 
     sample_var_sqrt = np.sqrt(sample_var + eps)
 
     sample_var_sqrt_inv = 1 / sample_var_sqrt
 
-    x_norm = x_centered * sample_var_sqrt_inv
+    x_norm = x_center * sample_var_sqrt_inv
 
     x_norm_gamma = x_norm * gamma
 
     x_norm_gamma_beta = x_norm_gamma + beta
 
     out = x_norm_gamma_beta
-    cache = (x_centered, x_centered_squared, sample_var, sample_var_sqrt,
+    cache = (x_center, x_center_squared, sample_var, sample_var_sqrt,
              sample_var_sqrt_inv, x_norm, x_norm_gamma, x_norm_gamma_beta,
-             gamma, beta)
+             gamma, beta, eps, x)
 
     running_mean = momentum * running_mean + (1 - momentum) * sample_mean
     running_var = momentum * running_var + (1 - momentum) * sample_var
@@ -256,10 +256,55 @@ def batchnorm_backward(dout, cache):
   #############################################################################
 
   # https://kratzert.github.io/2016/02/12/understanding-the-gradient-flow-through-the-batch-normalization-layer.html
+  # http://cthorey.github.io./backpropagation/
 
-  (x_centered, x_centered_squared, sample_var, sample_var_sqrt,
+  (x_center, x_centered_squared, sample_var, sample_var_sqrt,
    sample_var_sqrt_inv, x_norm, x_norm_gamma, x_norm_gamma_beta,
-   gamma, beta) = cache
+   gamma, beta, eps, x) = cache
+
+  N, D = x.shape
+
+  dL_dout = dout
+
+  dL_dx_norm_gamma_beta = dL_dout
+
+  dL_dbeta = np.sum(dL_dx_norm_gamma_beta, axis = 0)
+
+  dL_dx_norm_gamma = dL_dx_norm_gamma_beta
+
+  dx_norm_gamma_dx_norm = gamma
+
+  dx_norm_gamma_dgamma = x_norm
+
+  dL_dgamma = np.sum(dL_dx_norm_gamma * dx_norm_gamma_dgamma, axis = 0)
+
+  dL_dx_norm = dL_dx_norm_gamma * dx_norm_gamma_dx_norm
+
+  dx_norm_dx_center = sample_var_sqrt_inv
+
+  dx_norm_dsample_var_sqrt_inv = x_norm
+
+  dL_dx_center_1 = dL_dx_norm * dx_norm_dx_center
+
+  dL_dsample_var_sqrt_inv = np.sum(dL_dx_norm * dx_norm_dsample_var_sqrt_inv, axis = 0)
+
+  dL_dsample_var_sqrt = dL_dsample_var_sqrt_inv * -sample_var_sqrt_inv
+
+  dL_dsample_var = dL_dsample_var_sqrt / (2 * (sample_var + eps))
+
+  dL_dx_center_squared = dL_dsample_var * np.ones((N, D)) / N
+
+  dL_dx_center_2 = 2 * x_center * dL_dx_center_squared
+
+  dL_dx1 = dL_dx_center_1 + dL_dx_center_2
+
+  dL_dsample_mean = - np.sum(dL_dx_center_1 + dL_dx_center_2, axis = 0)
+
+  dL_dx2 = np.ones((N, D)) * dL_dsample_mean / N
+
+  dx = dL_dx1 + dL_dx2
+  dgamma = dL_dgamma
+  dbeta = dL_dbeta
 
   #############################################################################
   #                             END OF YOUR CODE                              #
