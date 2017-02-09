@@ -266,13 +266,19 @@ class FullyConnectedNet(object):
                 (batchnorm_X, batchnorm_cache) = (affine_X, None)
 
             (relu_X, relu_cache) = relu_forward(batchnorm_X)
+
+            if self.use_dropout:
+                (dropout_X, dropout_cache) = dropout_forward(relu_X, self.dropout_param)
+            else:
+                (dropout_X, dropout_cache) = (relu_X, None)
+
+            caches.append((affine_cache, batchnorm_cache, relu_cache, dropout_cache))
+
+            X_i = dropout_X
         else:
-            batchnorm_cache = None
-            (relu_X, relu_cache) = (affine_X, None)
+            caches.append((affine_cache, None, None, None))
 
-        caches.append((affine_cache, batchnorm_cache, relu_cache))
-
-        X_i = relu_X
+            X_i = affine_X
 
     scores = X_i
 
@@ -304,10 +310,15 @@ class FullyConnectedNet(object):
         W_i = self.params['W%d' % (layer + 1)]
         b_i = self.params['b%d' % (layer + 1)]
 
-        (affine_cache, batchnorm_cache, relu_cache) = caches[layer]
+        (affine_cache, batchnorm_cache, relu_cache, dropout_cache) = caches[layer]
 
         if layer != self.num_layers - 1:
-            relu_dx = relu_backward(loss_dx, relu_cache)
+            if self.use_dropout:
+                dropout_dx = dropout_backward(loss_dx, dropout_cache)
+            else:
+                dropout_dx = loss_dx
+
+            relu_dx = relu_backward(dropout_dx, relu_cache)
 
             if self.use_batchnorm:
                 (batchnorm_dx, batchnorm_dgamma, batchnorm_dbeta) = batchnorm_backward_alt(relu_dx, batchnorm_cache)
