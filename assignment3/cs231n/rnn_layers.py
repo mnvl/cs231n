@@ -109,8 +109,10 @@ def rnn_forward(x, h0, Wx, Wh, b):
   h = np.zeros((N, T, H))
   caches = []
 
+  h0_t = h0
+
   for t in range(T):
-    (h0_t, cache_t) = rnn_step_forward(x[:, t, :], h0, Wx, Wh, b)
+    (h0_t, cache_t) = rnn_step_forward(x[:, t, :], h0_t, Wx, Wh, b)
 
     h[:, t, :] = h0_t
     caches.append((h0_t, cache_t))
