@@ -179,7 +179,7 @@ def word_embedding_forward(x, W):
   
   Inputs:
   - x: Integer array of shape (N, T) giving indices of words. Each element idx
-    of x muxt be in the range 0 <= idx < V.
+    of x must be in the range 0 <= idx < V.
   - W: Weight matrix of shape (V, D) giving word vectors for all words.
   
   Returns a tuple of:
@@ -192,7 +192,20 @@ def word_embedding_forward(x, W):
   #                                                                            #
   # HINT: This should be very simple.                                          #
   ##############################################################################
-  pass
+  (N, T) = x.shape
+  (V, D) = W.shape
+
+  out = np.zeros((N, T, D))
+
+  # for n in range(N):
+  #   for t in range(T):
+  #     out[n, t, :] = W[x[n, t]]
+
+  for n in range(N):
+    out[n, :, :] = W[x[n, :]]
+
+  cache = (x, W)
+
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
@@ -220,7 +233,21 @@ def word_embedding_backward(dout, cache):
   #                                                                            #
   # HINT: Look up the function np.add.at                                       #
   ##############################################################################
-  pass
+  (x, W) = cache
+  (N, T) = x.shape
+  (V, D) = W.shape
+
+  dW = np.zeros((V, D))
+
+  # for n in range(N):
+  #   for t in range(T):
+  #     dout_n_t = dout[n, t, :]
+  #     v_t = x[n, t]
+  #     dW[v_t, :] += dout_n_t
+
+  for n in range(N):
+    np.add.at(dW, x[n, :], dout[n, :, :])
+
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
