@@ -103,7 +103,20 @@ def rnn_forward(x, h0, Wx, Wh, b):
   # input data. You should use the rnn_step_forward function that you defined  #
   # above.                                                                     #
   ##############################################################################
-  pass
+  (N, T, D) = x.shape
+  H = h0.shape[1]
+
+  h = np.zeros((N, T, H))
+  caches = []
+
+  for t in range(T):
+    (h0_t, cache_t) = rnn_step_forward(x[:, t, :], h0, Wx, Wh, b)
+
+    h[:, t, :] = h0_t
+    caches.append((h0_t, cache_t))
+
+  cache = (D, caches)
+
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
@@ -130,7 +143,28 @@ def rnn_backward(dh, cache):
   # sequence of data. You should use the rnn_step_backward function that you   #
   # defined above.                                                             #
   ##############################################################################
-  pass
+  (N, T, H) = dh.shape
+  (D, caches) = cache
+
+  dx = np.zeros((N, T, D))
+  dh0 = np.zeros((N, H))
+  dWx = np.zeros((D, H))
+  dWh = np.zeros((H, H))
+  db = np.zeros(H)
+
+  for t in reversed(range(T)):
+    (h0_t, cache_t) = caches[t]
+    dh_t = dh[:, t, :]
+
+    (dx_t, dh0_t, dWx_t, dWh_t, db_t) = rnn_step_backward(dh_t, cache_t)
+
+    dh0 += dh0_t
+    dWx += dWx_t
+    dWh += dWh_t
+    db += db_t
+
+    dx[:, t, :] = dx_t
+
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
