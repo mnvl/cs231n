@@ -295,7 +295,18 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
   # TODO: Implement the forward pass for a single timestep of an LSTM.        #
   # You may want to use the numerically stable sigmoid implementation above.  #
   #############################################################################
-  pass
+  (N, H) = prev_h.shape
+  a = np.dot(x, Wx) + np.dot(prev_h, Wh) + b
+
+  i = sigmoid(a[:, 0 : H])
+  f = sigmoid(a[:, H : 2*H])
+  o = sigmoid(a[:, 2*H : 3*H])
+  g = np.tanh(a[:, 3*H :])
+
+  next_c = prev_c * f + i * g
+  next_h = o * np.tanh(next_c)
+
+  cache = (x, Wx, prev_c, prev_h, Wh, b, i, f, o, g, next_c, next_h)
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
@@ -327,7 +338,26 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
   # HINT: For sigmoid and tanh you can compute local derivatives in terms of  #
   # the output value from the nonlinearity.                                   #
   #############################################################################
-  pass
+  (x, Wx, prev_c, prev_h, Wh, b, i, f, o, g, next_c, next_h) = cache
+  (N, H) = prev_h.shape
+
+  di_dx = np.dot(i * (1. - i), Wx[:, : H].T)
+  df_dx = np.dot(f * (1. - f), Wx[:, H : 2*H].T)
+  do_dx = np.dot(o * (1. - o), Wx[:, 2*H : 3*H].T)
+  dg_dx = np.dot(1 - g**2, Wx[:, 3*H :].T)
+
+  dnext_c_dx = np.dot(prev_c.T, df_dx).T + np.dot(di_dx.T, g) + np.dot(dg_dx.T, i)
+
+  dnext_h_dx = np.dot(do_dx.T, np.tan(next_c)) + np.dot(o.T, np.dot((1. - np.tanh(next_c) ** 2), dnext_c_dx.T)).T
+
+  dx = np.dot(dnext_h, dnext_h_dx.T)
+
+  dprev_h = 0
+  dprev_c = 0
+  dWx = 0
+  dWh = 0
+  db = 0
+
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
