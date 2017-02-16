@@ -306,7 +306,7 @@ def lstm_step_forward(x, prev_h, prev_c, Wx, Wh, b):
   next_c = prev_c * f + i * g
   next_h = o * np.tanh(next_c)
 
-  cache = (x, Wx, prev_c, prev_h, Wh, b, i, f, o, g, next_c, next_h)
+  cache = (x, Wx, Wh, b, a, i, f, o, g, prev_c, prev_h, next_c, next_h)
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
@@ -338,25 +338,31 @@ def lstm_step_backward(dnext_h, dnext_c, cache):
   # HINT: For sigmoid and tanh you can compute local derivatives in terms of  #
   # the output value from the nonlinearity.                                   #
   #############################################################################
-  (x, Wx, prev_c, prev_h, Wh, b, i, f, o, g, next_c, next_h) = cache
+  (x, Wx, Wh, b, a, i, f, o, g, prev_c, prev_h, next_c, next_h) = cache
   (N, H) = prev_h.shape
 
-  di_dx = np.dot(i * (1. - i), Wx[:, : H].T)
-  df_dx = np.dot(f * (1. - f), Wx[:, H : 2*H].T)
-  do_dx = np.dot(o * (1. - o), Wx[:, 2*H : 3*H].T)
-  dg_dx = np.dot(1 - g**2, Wx[:, 3*H :].T)
+  dL_do = np.tanh(next_c) * dnext_h
 
-  dnext_c_dx = np.dot(prev_c.T, df_dx).T + np.dot(di_dx.T, g) + np.dot(dg_dx.T, i)
+  dL_dnext_c = o * (1 - np.tanh(next_c)**2) * dnext_h + dnext_c
 
-  dnext_h_dx = np.dot(do_dx.T, np.tan(next_c)) + np.dot(o.T, np.dot((1. - np.tanh(next_c) ** 2), dnext_c_dx.T)).T
+  dprev_c = f * dL_dnext_c
 
-  dx = np.dot(dnext_h, dnext_h_dx.T)
+  dL_df = prev_c * dL_dnext_c
+  dL_di = g * dL_dnext_c
+  dL_dg = i * dL_dnext_c
 
-  dprev_h = 0
-  dprev_c = 0
-  dWx = 0
-  dWh = 0
-  db = 0
+  dL_da1 = i * (1. - i) * dL_di
+  dL_da2 = f * (1. - f) * dL_df
+  dL_da3 = o * (1. - o) * dL_do
+  dL_da4 = (1. - g ** 2) * dL_dg
+
+  dL_da = np.hstack((dL_da1, dL_da2, dL_da3, dL_da4))
+
+  dx = np.dot(dL_da, Wx.T)
+  dprev_h = np.dot(dL_da, Wh.T)
+  dWx = np.dot(x.T, dL_da)
+  dWh = np.dot(dL_da.T, prev_h).T
+  db = np.sum(dL_da, axis = 0)
 
   ##############################################################################
   #                               END OF YOUR CODE                             #
