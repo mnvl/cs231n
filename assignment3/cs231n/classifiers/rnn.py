@@ -135,7 +135,40 @@ class CaptioningRNN(object):
     # defined above to store loss and gradients; grads[k] should give the      #
     # gradients for self.params[k].                                            #
     ############################################################################
-    pass
+    h0, h0_cache = affine_forward(features, W_proj, b_proj)
+
+    we, we_cache = word_embedding_forward(captions_in, W_embed)
+
+    if self.cell_type == 'rnn':
+      (h, rnn_cache) = rnn_forward(we, h0, Wx, Wh, b)
+    else:
+      (h, rnn_cache) = lstm_forward(we, h0, Wx, Wh, b)
+
+    (vs, vs_cache) = temporal_affine_forward(h, W_vocab, b_vocab)
+
+    loss, dloss = temporal_softmax_loss(vs, captions_out, mask)
+
+    (dh, dW_vocab, db_vocab) = temporal_affine_backward(dloss, vs_cache)
+
+    if self.cell_type == 'rnn':
+      dwe, dh0, dWx, dWh, db = rnn_backward(dh, rnn_cache)
+    else:
+      dwe, dh0, dWx, dWh, db = lstm_backward(dh, rnn_cache)
+
+    dW_embed = word_embedding_backward(dwe, we_cache)
+
+    _, dW_proj, db_proj = affine_backward(dh0, h0_cache)
+
+    grads = {}
+    grads["W_embed"] = dW_embed
+    grads["Wx"] = dWx
+    grads["Wh"] = dWh
+    grads["b"] = db
+    grads["W_vocab"] = dW_vocab
+    grads["b_vocab"] = db_vocab
+    grads["W_proj"] = dW_proj
+    grads["b_proj"] = db_proj
+
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
@@ -197,7 +230,27 @@ class CaptioningRNN(object):
     # functions; you'll need to call rnn_step_forward or lstm_step_forward in #
     # a loop.                                                                 #
     ###########################################################################
-    pass
+    (N, D) = features.shape
+
+    h0, _ = affine_forward(features, W_proj, b_proj)
+
+    we = np.array([W_embed[self._start, :],] * N)
+    next_h = h0
+    next_c = np.zeros_like(h0)
+
+    for t in range(max_length):
+      if self.cell_type == 'rnn':
+        (next_h, _) = rnn_step_forward(we, next_h, Wx, Wh, b)
+      else:
+        (next_h, next_c, _) = lstm_step_forward(we, next_h, next_c, Wx, Wh, b)
+
+      (vs, _) = affine_forward(next_h, W_vocab, b_vocab)
+
+      vi = np.argmax(vs, axis = 1)
+      captions[:, t] = vi
+
+      we = W_embed[vi, :]
+
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
